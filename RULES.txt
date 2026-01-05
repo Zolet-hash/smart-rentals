@@ -1,0 +1,3 @@
+ALWAYS GIT PULL BEFORE GIT PUSHING
+NEVER FORCE GIT PUSH
+--ownerships on each dir will be added later
