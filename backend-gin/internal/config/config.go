@@ -3,7 +3,7 @@ package config
 import "time"
 
 type config struct {
-	server struct {
+	Server struct {
 		Port string
 		Host string
 		ReadTimeout time.Duration
@@ -25,3 +25,4 @@ type config struct {
 	}
 	Environment string
 }
+
