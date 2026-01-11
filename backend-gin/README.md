@@ -7,10 +7,11 @@ go get github.com/lib/pq
 go get golang.org/x/crypto/bcrypt
 go get github.com/gin-gonic/gin
 go get golang.org/x/time/rate
+go get github.com/joho/godotenv
 ```
 # Run your server
 ```go
-go run .
+go run cmd/main.go
 ```
 ##***TROUBLESHOOTING***
 -must have .env since i'll not push
