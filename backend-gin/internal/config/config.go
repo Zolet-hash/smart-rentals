@@ -1,28 +1,64 @@
 package config
 
-import "time"
+import (
+	"os"
+	"time"
 
-type config struct {
+	"github.com/joho/godotenv"
+)
+
+type Config struct {
 	Server struct {
-		Port string
-		Host string
-		ReadTimeout time.Duration
+		Port         string
+		Host         string
+		ReadTimeout  time.Duration
 		WriteTimeout time.Duration
 	}
-	Database struct{
-		Host string
-		Port string
-		User string
+	Database struct {
+		Host     string
+		Port     string
+		User     string
 		Password string
-		DBName string
-		SSLMode string
-
+		DBName   string
+		SSLMode  string
 	}
-	JWT struct{
-		Secret string
-		TokenExpiry time.Duration
+	JWT struct {
+		Secret        string
+		TokenExpiry   time.Duration
 		RefreshExpiry time.Duration
 	}
 	Environment string
 }
 
+func Load() (*Config, error) {
+	godotenv.Load() //Load .env if exists
+
+	cfg := &Config{}
+
+	//Server config
+	cfg.Server.Port = getEnv("SERVER_PORT", "8080")
+	cfg.Server.Host = getEnv("SERVER_HOST", "0.0.0.0")
+
+	//Database config
+	cfg.Database.Host = getEnv("DB_HOST", "loacalhost")
+	cfg.Database.Port = getEnv("DB_PORT", "5432")
+	cfg.Database.User = getEnv("DB_USER", "zoet")
+	cfg.Database.Password = getEnv("DB_PASSWORD", "")
+	cfg.Database.DBName = getEnv("DB_NAME", "auth_service")
+	cfg.Database.SSLMode = getEnv("DB_SSLMODE", "disable")
+
+	//JWT config
+	cfg.JWT.Secret = getEnv("JWT_SECRET", "")
+	cfg.JWT.TokenExpiry = time.Hour * 24    //24 hours
+	cfg.JWT.RefreshExpiry = time.Hour * 168 //7 days
+
+	cfg.Environment = getEnv("ENV", "development")
+	return cfg, nil
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
