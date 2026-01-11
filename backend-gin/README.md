@@ -12,8 +12,18 @@ go get golang.org/x/time/rate
 ```go
 go run .
 ```
-# Database connection and creation
+##***TROUBLESHOOTING***
+-must have .env since i'll not push
+```shell
+touch backend-gin/.env
+```
+**to generate JWT_SECRET**
+```shell
+openssl rand -base64 64
+```
 
+# Database connection and creation
+**
 # Api testing
 ```shell
 curl 
