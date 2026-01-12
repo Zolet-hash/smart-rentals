@@ -27,6 +27,7 @@ type UserRegister struct {
 	Password string `json:"password" binding:"required,min=6"`
 }
 
+//Validate checks if email format is valid
 func (u *UserRegister) Validate() error {
 	emailRegexp := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 	if !emailRegexp.MatchString(u.Email) {
