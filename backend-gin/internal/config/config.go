@@ -64,7 +64,7 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-func (c *Config) getDSN() string {
+func (c *Config) GetDSN() string {
 	return fmt.Sprintf("host=%s port=%s user=%s password%s dbname=%s sslmode=%s",
 		c.Database.Host,
 		c.Database.Port,
