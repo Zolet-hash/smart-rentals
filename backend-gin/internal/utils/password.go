@@ -41,7 +41,7 @@ func ValidatePassword(password string) error {
 			hasLower = true
 		case unicode.IsDigit(r):
 			hasNumber = true
-		case unicode.IsSymbol(r) && unicode.IsPunct(r):
+		case unicode.IsSymbol(r) || unicode.IsPunct(r):
 			hasSpecial = true
 		}
 	}
