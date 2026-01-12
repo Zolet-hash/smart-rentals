@@ -15,7 +15,7 @@ import (
 type AuthHandler struct {
 	db        *database.Database
 	jwtSecret []byte
-	//Add token expiration configration
+	// Add token expiration configuration
 	tokenExpiration time.Duration
 }
 
@@ -24,15 +24,15 @@ func NewAuthHandler(db *database.Database, jwtSecret []byte) *AuthHandler {
 	return &AuthHandler{
 		db:              db,
 		jwtSecret:       jwtSecret,
-		tokenExpiration: 24 * time.Hour,
+		tokenExpiration: 24 * time.Hour, // Default 24 hour expiration
 	}
 }
 
-// Register handles User Registration
+// Register handles user registration
 func (h *AuthHandler) Register(c *gin.Context) {
 	var user models.UserRegister
 
-	//validate input json
+	// Validate input JSON
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":   "Invalid input format",
@@ -41,15 +41,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	//Validations to check if email is valid
+	// Additional validation
 	if err := user.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	//check if user already exists
+	// Check if user already exists
 	var exists bool
-	err := h.db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", user.Email).Scan(&exists)
+	err := h.db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)",
+		user.Email).Scan(&exists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -59,24 +60,25 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	//Hash password
+	// Hash password
 	hashedPassword, err := utils.HashPassword(user.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Password processing failed"})
 		return
 	}
 
-	//Insert user with transaction
-	tx, err := h.db.DB.Begin() //group multiple database operations
+	// Insert user with transaction
+	tx, err := h.db.DB.Begin()//group multiple database operations
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction start failed"})
 		return
 	}
+
 	var id int
 	err = tx.QueryRow(`
-		INSERT INTO users (email, password_hash)
-		VALUES ($1 $2)
-		RETURNING id`,
+        INSERT INTO users (email, password_hash) 
+        VALUES ($1, $2) 
+        RETURNING id`,
 		user.Email, hashedPassword,
 	).Scan(&id)
 
@@ -90,47 +92,48 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction commit failed"})
 		return
 	}
+
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "user registered successfuly",
+		"message": "User registered successfully",
 		"user_id": id,
 	})
 }
 
-// Login handlers user authentication and JWT generation
+// Login handles user authentication and JWT generation
 func (h *AuthHandler) Login(c *gin.Context) {
 	var login models.UserLogin
 	if err := c.ShouldBindJSON(&login); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid login data"}) //400
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid login data"})
 		return
 	}
 
-	//Get user from database
+	// Get user from database
 	var user models.User
 	err := h.db.DB.QueryRow(`
-	SELECT id, email password_hash
-	FROM users
-	WHERE email = $1`,
+        SELECT id, email, password_hash 
+        FROM users 
+        WHERE email = $1`,
 		login.Email,
-	).Scan(user.ID, user.Email, user.PasswordHash)
+	).Scan(&user.ID, &user.Email, &user.PasswordHash)
 
 	if err == sql.ErrNoRows {
-		//server shouldn't give much info
+		// Don't specify whether email or password was wrong
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
-
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Login process failed"})
 		return
 	}
 
-	//Verify password
+	// Verify password
 	if !utils.CheckPasswordHash(login.Password, user.PasswordHash) {
+		// Use same message as above for security
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	//Genarate JWT with Claims
+	// Generate JWT with claims
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"user_id": user.ID,
@@ -139,31 +142,31 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		"exp":     now.Add(h.tokenExpiration).Unix(),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(h.jwtSecret)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation failed"})
 		return
 	}
 
-	//Return token with expiration
+	// Return token with expiration
 	c.JSON(http.StatusOK, gin.H{
-		"token_string": tokenString,
-		"expires_in":   h.tokenExpiration.Seconds(),
-		"token_type":   "Bearer",
+		"token":      tokenString,
+		"expires_in": h.tokenExpiration.Seconds(),
+		"token_type": "Bearer",
 	})
 }
 
 // RefreshToken generates a new token for valid users
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
-	//Get user ID fro context(set by auth middleware)
+	// Get user ID from context (set by auth middleware)
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
-	//Generate new token
+	// Generate new token
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"user_id": userID,
