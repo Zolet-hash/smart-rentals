@@ -41,11 +41,15 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Additional validation
+	// Additional validations
 	if err := user.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	if err := utils.ValidatePassword(user.Password); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
 
 	// Check if user already exists
 	var exists bool
