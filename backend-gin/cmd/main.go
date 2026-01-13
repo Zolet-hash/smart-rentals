@@ -1,13 +1,13 @@
 package main
 
 import (
-	"backend-gin/internal/config"
-	"backend-gin/internal/database"
-	"backend-gin/internal/handlers"
-	"backend-gin/internal/middleware"
 	"log"
 	"net/http"
 
+	"github.com/Zolet-hash/smart-rentals/internal/config"
+	"github.com/Zolet-hash/smart-rentals/internal/database"
+	"github.com/Zolet-hash/smart-rentals/internal/handlers"
+	"github.com/Zolet-hash/smart-rentals/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 

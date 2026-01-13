@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"backend-gin/internal/database"
-	"backend-gin/internal/models"
-	"backend-gin/internal/utils"
 	"database/sql"
 	"net/http"
 	"time"
 
+	"github.com/Zolet-hash/smart-rentals/internal/database"
+	"github.com/Zolet-hash/smart-rentals/internal/models"
+	"github.com/Zolet-hash/smart-rentals/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -50,7 +50,6 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
-
 	// Check if user already exists
 	var exists bool
 	err := h.db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)",
@@ -72,7 +71,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	// Insert user with transaction
-	tx, err := h.db.DB.Begin()//group multiple database operations
+	tx, err := h.db.DB.Begin() //group multiple database operations
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction start failed"})
 		return
