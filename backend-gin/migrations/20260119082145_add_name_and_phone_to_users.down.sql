@@ -1,0 +1,4 @@
+ALTER TABLE users
+DROP COLUMN phone,
+DROP COLUMN full_name,
+DROP COLUMN role;
