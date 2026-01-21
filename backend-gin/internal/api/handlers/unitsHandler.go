@@ -16,40 +16,63 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 
 		// Bind JSON request body
 		if err := ctx.ShouldBindJSON(&unit); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		// var exists bool
-		// err := db.QueryRow(
-		// 	"SELECT EXISTS (SELECT 1 FROM properties WHERE id = $1)",
-		// 	unit.PropertyID,
-		// ).Scan(&exists)
-
-		// if err != nil || !exists {
-		// 	ctx.JSON(http.StatusBadRequest, gin.H{
-		// 		"error": "property does not exist",
-		// 	})
-		// 	return
-		// }
-
-		// Basic validation
 		if unit.PropertyID == 0 {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error": "property_id is required",
-			})
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "property_id is required"})
 			return
 		}
 
 		if unit.UnitPrice <= 0 {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error": "unit_price must be greater than zero",
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "unit_price must be greater than zero"})
+			return
+		}
+
+		// Get landlord ID from JWT
+		userID, exists := ctx.Get("user_id")
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		landlordIDFloat, ok := userID.(float64)
+		if !ok || landlordIDFloat <= 0 {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		landlordID := uint(landlordIDFloat)
+
+		// Verify property ownership
+		var existsProperty bool
+		checkQuery := `
+			SELECT EXISTS (
+				SELECT 1 FROM properties
+				WHERE id = $1 AND landlord_id = $2
+			)
+		`
+
+		err := db.DB.QueryRow(
+			checkQuery,
+			unit.PropertyID,
+			landlordID,
+		).Scan(&existsProperty)
+
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if !existsProperty {
+			ctx.JSON(http.StatusForbidden, gin.H{
+				"error": "You do not own this property",
 			})
 			return
 		}
 
+		//Create unit
 		query := `
 			INSERT INTO units (
 				property_id,
@@ -63,7 +86,7 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 			RETURNING id, created_at, updated_at
 		`
 
-		err := db.DB.QueryRow(
+		err = db.DB.QueryRow(
 			query,
 			unit.PropertyID,
 			unit.UnitName,
@@ -76,15 +99,14 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 		)
 
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		ctx.JSON(http.StatusCreated, unit)
 	}
 }
+
 
 func GetUnitsByProperty(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
