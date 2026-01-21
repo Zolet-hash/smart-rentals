@@ -79,10 +79,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	var id int
 	err = tx.QueryRow(`
-        INSERT INTO users (email, password_hash) 
-        VALUES ($1, $2) 
+        INSERT INTO users (email, password_hash, full_name, phone, role) 
+        VALUES ($1, $2, $3, $4, $5) 
         RETURNING id`,
-		user.Email, hashedPassword,
+		user.Email, hashedPassword, user.FullName, user.Phone, user.Role,
 	).Scan(&id)
 
 	if err != nil {
@@ -125,7 +125,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Login process failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -153,11 +153,27 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Return token with expiration
+	// c.JSON(http.StatusOK, gin.H{
+	// 	"token":      tokenString,
+	// 	"expires_in": h.tokenExpiration.Seconds(),
+	// 	"token_type": "Bearer",
+	// })
+
+	// Set JWT as HttpOnly cookie
+	c.SetCookie(
+		"access_token",
+		tokenString,
+		int(h.tokenExpiration.Seconds()),
+		"/",
+		"localhost", // change to your domain in prod
+		false,       // secure (true in HTTPS)
+		true,        // httpOnly (IMPORTANT)
+	)
+
 	c.JSON(http.StatusOK, gin.H{
-		"token":      tokenString,
-		"expires_in": h.tokenExpiration.Seconds(),
-		"token_type": "Bearer",
+		"message": "login successful",
 	})
+
 }
 
 // RefreshToken generates a new token for valid users
