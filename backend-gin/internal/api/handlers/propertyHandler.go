@@ -16,36 +16,66 @@ func CreateProperty(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var property models.Property
 
-		//Bind JSON to property struct
+		// Bind JSON (landlord_id is NOT expected from client)
 		if err := ctx.ShouldBindJSON(&property); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		//Validate if landlord_id exists in the request
-		if property.LandlordID == 0 {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Landlord ID required"})
+		// Get landlord ID from JWT context
+		userID, exists := ctx.Get("user_id")
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return
 		}
 
-		//Insert the Propery into database
+		// JWT numeric claims are float64
+		landlordID, ok := userID.(float64)
+		if !ok {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		// Set landlord ID from token (override anything client sent)
+		property.LandlordID = uint(landlordID)
+
 		query := `
-			INSERT INTO properties (landlord_id, title, description, location, property_type, vacancy, total_rent, created_at, updated_at)
+			INSERT INTO properties (
+				landlord_id,
+				title,
+				description,
+				location,
+				property_type,
+				vacancy,
+				total_rent,
+				created_at,
+				updated_at
+			)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
 			RETURNING id, created_at, updated_at
 		`
-		//Execute the query, inserting the values and scanning results
-		err := db.DB.QueryRow(query, property.LandlordID, property.Title, property.Description, property.Location, property.Vacancy, property.TotalRent).
-			Scan(&property.ID, &property.CreatedAt, &property.UpdatedAt)
 
-		//Error handling for database insert
+		err := db.DB.QueryRow(
+			query,
+			property.LandlordID,
+			property.Title,
+			property.Description,
+			property.Location,
+			property.PropertyType,
+			property.Vacancy,
+			property.TotalRent,
+		).Scan(
+			&property.ID,
+			&property.CreatedAt,
+			&property.UpdatedAt,
+		)
+
 		if err != nil {
-			ctx.JSON(500, gin.H{"error": err.Error()})
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
-		//Return the response as JSON
-		ctx.JSON(201, property)
-
+		ctx.JSON(http.StatusCreated, property)
 	}
 }
 
@@ -226,7 +256,7 @@ func UpdateProperty(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		// Input struct (PATCH-friendly)
+		// Input struct partialy update(PATCH)
 		var input struct {
 			Title        *string  `json:"title"`
 			Description  *string  `json:"description"`
