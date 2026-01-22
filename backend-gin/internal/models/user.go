@@ -8,9 +8,12 @@ import (
 
 // User represents our database user
 type User struct {
-	ID           int
+	ID           int       `json:"id"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"` //"-" means this wont be included in JSON
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	Role         string    `json:"role"`
 	CreatedAT    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -25,6 +28,9 @@ type UserLogin struct {
 type UserRegister struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
+	FullName string `json:"full_name"`
+	Phone    string `json:"phone" gorm:"unique"`
+	Role     string `json:"role"`
 }
 
 // Validate checks if email format is valid
