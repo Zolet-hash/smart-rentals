@@ -4,100 +4,65 @@ import (
 	"time"
 )
 
-type Users struct {
-	ID           uint      `json:"id" gorm:"primaryKey"`
-	Email        string    `json:"email" gorm:"not null"`
-	PasswordHash string    `json:"-"`
-	Role         []Role    `json:"role"`
-	PhoneNumber  string    `json:"phone_number" gorm:"not null"`
-	CreatedAT    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-}
-
-type Role struct {
-	ID       uint   `json:"id" gorm:"primaryKey"`
-	Admin    string `json:"admin"`
-	Landlord string `json:"landlord"`
-	Tenant   string `json:"tenant"`
-}
-
-type UserRole struct {
-	UserRoleID uint `json:"user_role_id"`
-	UserID     uint `json:"user_id"` //foreign key for Users
-	RoleID     uint `json:"role_id"` //Foreign key for Roles
-}
-
-type Landlord struct {
-	ID         int
-	UserRoleID uint
-	Tenants    []Tenant
-	Properties []Property
-}
-
 type Tenant struct {
-	ID int
-	UserRoleID  int
+	ID         uint   `json:"id"`
+	TenantName string `json:"tenant_name"`
+	PaymentNo  string `json:"payment_no"`
+	UnitID     Unit   `json:"unit_id"` //FK -> units
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Property struct {
-	ID           int          `json:"id" gorm:"primaryKey"`  //1
-	Title        string       `json:"title" gorm:"not null"` //Qwetu residents
-	Owner        string       `json:"owner"`                 //Emmaunel Sulwe
-	Description  string       `json:"description"`           //modern student appartments
-	Location     string       `json:"location"`              //westlands, nairobi
-	PropertyType string       `json:"property_type"`         // appartments
-	ProperyImage ProperyImage //A property can have several images
-	Vacancy      bool         `json:"vacancy"`    //true/false
-	Units        []Unit       `json:"units"`      // a property can have several units
-	TotalRent    int          `json:"total_rent"` //200, 000
-	CreatedAT    time.Time    `json:"created_at"` //25th june 2024
-	UpdatedAt    time.Time    `json:"updated_at"` //2 jan 2026
+	ID           uint      `json:"id"`
+	LandlordID   uint      `json:"landlord_id"` //FK userID users table
+	Title        string    `json:"title"`
+	Description  string    `json:"description"`
+	Location     string    `json:"location"`
+	PropertyType string    `json:"property_type"`
+	Vacancy      bool      `json:"vacancy"`
+	TotalRent    int       `json:"total_rent"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Unit struct {
-	ID         int `json:"id" gorm:"primaryKey"`
-	PropertyID int `json:"property_id" gorm:"foreignKey"`
-	Property   Property
-	TenantID   int
-	Tenant     Tenant
-	UnitName   string
-	UnitType   string //Bedsitter,
-	UnitPrice  int    //4500
-	CreatedAT  time.Time
-	UpdatedAt  time.Time
-}
+	ID         uint `json:"id"`
+	PropertyID uint `json:"property_id"` //FK property_id -> properties
 
-type ProperyImage struct {
-	ID         int
-	PropertyID int
-	ImageURL   string
-	CreatedAT  time.Time
-	UpdatedAt  time.Time
-}
-
-type Lease struct {
-	ID         uint
-	UnitID     uint
-	Unit       Unit
-	TenantID   int
-	Tenant     Tenant //relationship with Tenant
-	LeaseStart time.Time
-	Status     string
-	LeaseEnd   time.Time
+	UnitName  string    `json:"unit_name"`
+	UnitType  string    `json:"unit_type"`
+	UnitPrice int       `json:"unit_price"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Payment struct {
-	ID            int
-	UnitID        uint
-	Unit          Unit
-	Tenant        Tenant
-	PaymentMethod string
+	ID            uint   `json:"id"`
+	TenantID      uint   `json:"tenant_id"`
+	UnitID        uint   `json:"unit_id"`
+	Amount        int    `json:"amount"`
+	PaymentMethod string `json:"payment_method"`
+
+	PaymentDate time.Time `json:"payment_date"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Notification struct {
-	ID int
+	ID       uint   `json:"id"`
+	Message  string `json:"message"`
+	IsRead   bool   `json:"is_read"`
+	TenantID uint   `json:"tenant_id"`
+
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Message struct {
-	ID int
+	ID       uint   `json:"id"`
+	Sender   string `json:"sender"`
+	Receiver string `json:"receiver"`
+	Content  string `json:"content"`
+
+	CreatedAt time.Time `json:"created_at"`
 }
