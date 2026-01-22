@@ -20,7 +20,7 @@ func CreateTenant(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Validate required fields
-		if tenant.UserID == 0 {
+		if tenant.ID == 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required"})
 			return
 		}
@@ -45,11 +45,11 @@ func CreateTenant(db *sql.DB) gin.HandlerFunc {
 
 		landlordID := uint(landlordIDFloat)
 
-		//Ensure user exists
+		//Ensure user(Landlord) exists
 		var userExists bool
 		err := db.QueryRow(
 			`SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)`,
-			tenant.UserID,
+			tenant.ID,
 		).Scan(&userExists)
 
 		if err != nil {
@@ -58,7 +58,7 @@ func CreateTenant(db *sql.DB) gin.HandlerFunc {
 		}
 
 		if !userExists {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "user does not exist"})
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Landlord does not exist"})
 			return
 		}
 
@@ -105,7 +105,7 @@ func CreateTenant(db *sql.DB) gin.HandlerFunc {
 
 		err = db.QueryRow(
 			query,
-			tenant.UserID,
+			tenant.ID,
 			tenant.UnitID,
 		).Scan(
 			&tenant.ID,
@@ -138,7 +138,7 @@ func RemoveTenant(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 🔐 Get landlord ID from JWT
+		//Get landlord ID from JWT
 		userID, exists := ctx.Get("user_id")
 		if !exists {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -153,7 +153,7 @@ func RemoveTenant(db *sql.DB) gin.HandlerFunc {
 
 		landlordID := uint(landlordIDFloat)
 
-		// 🚀 Begin transaction
+		// Begin transaction
 		tx, err := db.Begin()
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -161,7 +161,7 @@ func RemoveTenant(db *sql.DB) gin.HandlerFunc {
 		}
 		defer tx.Rollback()
 
-		// 1️⃣ Get unit_id & verify ownership
+		//Get unit_id & verify ownership
 		var unitID uint
 		ownershipQuery := `
 			SELECT t.unit_id
@@ -188,7 +188,7 @@ func RemoveTenant(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 2️⃣ Delete tenant
+		//Delete tenant
 		_, err = tx.Exec(
 			`DELETE FROM tenants WHERE id = $1`,
 			tenantID,
@@ -198,7 +198,7 @@ func RemoveTenant(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 3️⃣ Mark unit as vacant
+		//Mark unit as vacant
 		_, err = tx.Exec(
 			`
 			UPDATE units
@@ -213,7 +213,7 @@ func RemoveTenant(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// ✅ Commit transaction
+		// Commit transaction
 		if err := tx.Commit(); err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
