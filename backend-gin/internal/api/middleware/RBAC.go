@@ -1,54 +1,66 @@
 package middleware
 
-import "github.com/gin-gonic/gin"
+import (
+	"database/sql"
+	"net/http"
 
-func AdminMiddleware() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		role, exists := ctx.Get("role")
-		if !exists {
-			ctx.JSON(500, gin.H{"error": "Role not found in context"})
-			ctx.Abort()
-			return
-		}
-		if role != "admin" {
-			ctx.JSON(403, gin.H{"error": "Admin access required"})
-			ctx.Abort()
-			return
-		}
-		ctx.Next()
-	}
-}
+	"github.com/Zolet-hash/smart-rentals/internal/database"
+	"github.com/gin-gonic/gin"
+)
 
-func LandlordMiddleware() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		role, exists := ctx.Get("role")
-		if !exists {
-			ctx.JSON(500, gin.H{"error": "Role not found in context"})
-			ctx.Abort()
-			return
-		}
-		if role != "landlord" {
-			ctx.JSON(403, gin.H{"error": "Landlord access required"})
-			ctx.Abort()
-			return
-		}
-		ctx.Next()
-	}
-}
+func RequireRole(db *database.Database, requiredRole string) gin.HandlerFunc {
+	return func(c *gin.Context) {
 
-func TenantMiddleware() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		role, exists := ctx.Get("role")
+		// Get user ID from context (set by JWT auth middleware)
+		userIDValue, exists := c.Get("userID") //type inteface{}
 		if !exists {
-			ctx.JSON(500, gin.H{"error": "Role not found in context"})
-			ctx.Abort()
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "unauthorized",
+			})
 			return
 		}
-		if role != "tenant" {
-			ctx.JSON(403, gin.H{"error": "Tenant access required"})
-			ctx.Abort()
+
+		userID, ok := userIDValue.(uint)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid user id",
+			})
 			return
 		}
-		ctx.Next()
+
+		// Fetch user role only (fast path)
+		var role string
+		err := db.DB.QueryRowContext(
+			c.Request.Context(),
+			`SELECT role FROM users WHERE id = $1`,
+			userID,
+		).Scan(&role)
+
+		if err == sql.ErrNoRows {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "user not found",
+			})
+			return
+		}
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": "database error",
+			})
+			return
+		}
+
+		// Check role
+		if role != requiredRole {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "forbidden: insufficient permissions",
+			})
+			return
+		}
+
+		// Store minimal user info in context
+		c.Set("userID", userID)
+		c.Set("role", role)
+
+		c.Next()
 	}
 }
