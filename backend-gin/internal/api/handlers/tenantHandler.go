@@ -3,13 +3,15 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/Zolet-hash/smart-rentals/internal/database"
 	"github.com/Zolet-hash/smart-rentals/internal/models"
 	"github.com/gin-gonic/gin"
 )
 
-func CreateTenant(db *sql.DB) gin.HandlerFunc {
+func CreateTenant(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var tenant models.Tenant
 
@@ -47,7 +49,7 @@ func CreateTenant(db *sql.DB) gin.HandlerFunc {
 
 		//Ensure user(Landlord) exists
 		var userExists bool
-		err := db.QueryRow(
+		err := db.DB.QueryRow(
 			`SELECT EXISTS (SELECT 1 FROM users WHERE id = $1)`,
 			tenant.ID,
 		).Scan(&userExists)
@@ -73,7 +75,7 @@ func CreateTenant(db *sql.DB) gin.HandlerFunc {
 			)
 		`
 
-		err = db.QueryRow(
+		err = db.DB.QueryRow(
 			ownershipQuery,
 			tenant.UnitID,
 			landlordID,
@@ -103,7 +105,7 @@ func CreateTenant(db *sql.DB) gin.HandlerFunc {
 			RETURNING id, created_at, updated_at
 		`
 
-		err = db.QueryRow(
+		err = db.DB.QueryRow(
 			query,
 			tenant.ID,
 			tenant.UnitID,
@@ -130,7 +132,190 @@ func CreateTenant(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-func RemoveTenant(db *sql.DB) gin.HandlerFunc {
+func ListAllTenants(db *database.Database) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		// Get landlord ID from JWT
+		userID, exists := ctx.Get("user_id")
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		landlordIDFloat, ok := userID.(float64)
+		if !ok || landlordIDFloat <= 0 {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		landlordID := uint(landlordIDFloat)
+
+		// Query tenants belonging to landlord's units
+		query := `
+			SELECT 
+				t.id,
+				t.user_id,
+				t.unit_id,
+				t.created_at,
+				t.updated_at
+			FROM tenants t
+			JOIN units u ON u.id = t.unit_id
+			JOIN properties p ON p.id = u.property_id
+			WHERE p.landlord_id = $1
+			ORDER BY t.created_at DESC
+		`
+
+		rows, err := db.DB.Query(query, landlordID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer rows.Close()
+
+		var tenants []models.Tenant
+
+		for rows.Next() {
+			var tenant models.Tenant
+
+			if err := rows.Scan(
+				&tenant.ID,
+				&tenant.ID,
+				&tenant.UnitID,
+				&tenant.CreatedAt,
+				&tenant.UpdatedAt,
+			); err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			tenants = append(tenants, tenant)
+		}
+
+		if err := rows.Err(); err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx.JSON(http.StatusOK, tenants)
+	}
+}
+
+
+func GetTenant(db *database.Database) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		idParam := ctx.Param("id")
+		tenantID, err := strconv.ParseInt(idParam, 10, 64)
+		if err != nil {
+			ctx.JSON(400, gin.H{"error": "Invalid tenant id"})
+			return
+		}
+
+		var tenant models.Tenant
+		query := `
+			SELECT
+				id,
+				landlord_id,
+				tenant_name,
+				payment_no,
+				rent,
+				created_at,
+				updated_at
+			FROM tenants
+			WHERE id = $1
+		`
+		err = db.DB.QueryRow(query, tenantID).Scan(
+			&tenant.ID,
+			&tenant.LandlordID,
+			tenant.UnitID,
+			&tenant.TenantName,
+			&tenant.PaymentNo,
+			&tenant.Rent,
+			&tenant.CreatedAt,
+			&tenant.UpdatedAt,
+		)
+
+		if err == sql.ErrNoRows {
+			ctx.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(200, tenant)
+	}
+}
+
+func UpdateTenant(db *database.Database) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		//Get tenant ID from URL
+		tenantID := ctx.Param("id")
+		if tenantID == "" {
+			ctx.JSON(400, gin.H{"error": "Property ID required"})
+			return
+		}
+
+		//Get landlord ID from JWT context
+		userID, exists := ctx.Get("user_id")
+		if !exists {
+			ctx.JSON(401, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		landlordID, ok := userID.(float64)
+		if !ok {
+			ctx.JSON(401, gin.H{"error": "Invalid userID"})
+		}
+
+		//input struct partialy update
+		var input struct {
+			TenantName *string `json:"tenant_name"`
+			PaymentNo  *string `json:"payment_no"`
+			Rent       *string `json:"rent"`
+		}
+
+		if err := ctx.ShouldBindJSON(&input); err != nil {
+			ctx.JSON(400, gin.H{"error": err.Error()})
+		}
+
+		query := `
+			UPDATE properties
+			SET
+				tenant_name = COALESCE($1, tenant_name),
+				payment_no = COALESCE($2, payment_no),
+				rent = COALESCE($3, rent),
+				updated_at = NOW()
+			WHERE id = $4 AND landlord_id = $5
+			RETURNING id, landlord_id, payment_name, payment_no, rent, updated_at
+		`
+
+		var tenant models.Tenant
+
+		err := db.DB.QueryRow(
+			query,
+			input.TenantName,
+			input.PaymentNo,
+			input.Rent,
+			tenantID,
+			int64(landlordID),
+		).Scan(
+			&tenant.ID,
+			&tenant.TenantName,
+			&tenant.PaymentNo,
+			&tenant.Rent,
+			&tenant.CreatedAt,
+			tenant.UpdatedAt,
+		)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				ctx.JSON(404, gin.H{"error": "tenant not found or not owned by user"})
+				return
+			}
+			ctx.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(200, tenant)
+	}
+}
+
+// RemoveTenant removes tenant from the database, incase he vacates
+func RemoveTenant(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		tenantID := ctx.Param("id")
 		if tenantID == "" {
@@ -154,7 +339,7 @@ func RemoveTenant(db *sql.DB) gin.HandlerFunc {
 		landlordID := uint(landlordIDFloat)
 
 		// Begin transaction
-		tx, err := db.Begin()
+		tx, err := db.DB.Begin()
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
