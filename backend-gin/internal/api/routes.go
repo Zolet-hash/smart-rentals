@@ -28,52 +28,47 @@ func SetupRoutes(r *gin.Engine) {
 	// Public routes
 	public := r.Group("/api/v1")
 	{
-		//public.POST("/register", authHandler.Register)
 		public.POST("/login", authHandler.Login)
 	}
 
 	adminRoutes := r.Group("/sudo")
 	adminRoutes.Use(
-		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), //sets uuid in cintext
+		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), //sets uuid in context
 		middleware.RequireRole(db, "admin"),               //checks role
 	)
 	{
-		adminRoutes.POST("register", authHandler.Register)
+		adminRoutes.POST("register", authHandler.Register) //register landlord
+		//admin.GET("/users", controllers.ListLandlords) --no at the moment
+ 		//admin.GET("/users/:id", controllers.GetLandlord) --since we only have 1 landlord
+ 		//admin.PATCH("/users/:id", controllers.Updatelandlord)
+		//admin.DELETE("/users/:id", controllers.Deletelandlord)
 	}
 
-	// Protected routes with JWT middleware
-	protected := r.Group("/api/v1")
-	protected.Use(middleware.AuthMiddleware([]byte(cfg.JWT.Secret)))
-	{
-		protected.POST("/refresh-token", authHandler.RefreshToken)
-		protected.POST("/logout", authHandler.Logout)
-		protected.GET("/profile", getUserProfile)
-	}
 
-		// LANDLORD ROUTES
-	landlord := api.Group("/landlord")
-	landlord.Use(middleware.RequireRole("landlord"))
+	// LANDLORD ROUTES
+	landlord := r.Group("/api/v1")
+	landlord.Use(middleware.AuthMiddleware([]byte(cfg.JWT.Secret)))
 	{
 		// Properties
-		landlord.POST("/properties", controllers.CreateProperty)
-		landlord.GET("/properties", controllers.ListProperties)
-		landlord.GET("/properties/:propertyId", controllers.GetProperty)
-		landlord.PUT("/properties/:propertyId", controllers.UpdateProperty) --At the moment NO [K.I.S.S]
-		landlord.DELETE("/properties/:propertyId", controllers.DeleteProperty) --K.I.S.S
+		landlord.POST("/properties/newProperty", handlers.CreateProperty(db))
+		landlord.GET("/properties/myProperties", handlers.ListProperties(db))
+		landlord.GET("/properties/:propertyId", handlers.GetProperty(db))
+		landlord.PATCH("/properties/:updatePropertyByID", handlers.UpdateProperty(db))
+		//landlord.DELETE("/properties/:propertyId", controllers.DeleteProperty) //--K.I.S.S
 
 		// Units (nested under properties)
-		landlord.POST("/properties/:propertyId/newUnit", controllers.CreateUnit)
-		landlord.GET("/properties/:propertyId/units", controllers.ListUnits)
-		landlord.GET("/units/:unitId", controllers.GetUnit)
-		landlord.PUT("/units/:unitId", controllers.UpdateUnit) --At the moment no
-		landlord.DELETE("/units/:unitId", controllers.DeleteUnit) --KISS principle
+		landlord.POST("/properties/:propertyId/newUnit", handlers.CreateUnit(db))
+		landlord.GET("/properties/:propertyId/units", handlers.GetUnitsByProperty(db))
+		//landlord.GET("/units/:unitId", controllers.GetUnit) --jj
+	    //landlord.PUT("/units/:unitId", controllers.UpdateUnit)
+		//landlord.DELETE("/units/:unitId", controllers.DeleteUnit) --ii
 
 		// Tenants (assigned to units)
-		landlord.POST("/units/:unitId/tenants", controllers.AddTenant)
-		landlord.GET("/units/:unitId/tenants", controllers.ListTenants)
-		landlord.GET("/tenants/:tenantId", controllers.GetTenant)
-		landlord.PUT("/tenants/:tenantId", controllers.UpdateTenant)
-		landlord.DELETE("/tenants/:tenantId", controllers.RemoveTenant)
+		landlord.POST("/units/:unitId/addTenant", handlers.CreateTenant(db))
+		landlord.GET("/units/:unitId/myTenants", handlers.ListAllTenants(db))
+		landlord.GET("/tenants/:tenantId", handlers.GetTenant(db))
+		landlord.PUT("/tenants/:tenantId", handlers.UpdateTenant(db))
+		landlord.DELETE("/tenants/:tenantId", handlers.RemoveTenant(db))
 	}
 
 }
@@ -88,50 +83,3 @@ func getUserProfile(c *gin.Context) {
 	})
 }
 
-// func RegisterRoutes(router *gin.Engine) {
-
-// 	api := router.Group("/api")
-// 	// PUBLIC ROUTES
-// 	auth := api.Group("/auth")
-// 	{
-// 		auth.POST("/login", controllers.Login)
-// 	}
-// 	// AUTHENTICATED ROUTES
-// 	api.Use(middleware.AuthMiddleware())
-
-// 	admin := api.Group("/admin")
-// 	admin.Use(middleware.RequireRole("admin"))
-// 	{
-// 		// User (Landlord) management --We have 2 users admin and landlord
-// 		admin.POST("/users", controllers.CreateUser)           // create landlord
-// 		admin.GET("/users", controllers.ListUsers)
-// 		admin.GET("/users/:id", controllers.GetUser)
-// 		admin.PUT("/users/:id", controllers.UpdateUser)
-// 		admin.DELETE("/users/:id", controllers.DeleteUser)
-// 	}
-	// LANDLORD ROUTES
-	landlord := api.Group("/landlord")
-	landlord.Use(middleware.RequireRole("landlord"))
-	{
-		// Properties
-		landlord.POST("/properties", controllers.CreateProperty)
-		landlord.GET("/properties", controllers.ListProperties)
-		landlord.GET("/properties/:propertyId", controllers.GetProperty)
-		landlord.PUT("/properties/:propertyId", controllers.UpdateProperty) --At the moment NO [K.I.S.S]
-		landlord.DELETE("/properties/:propertyId", controllers.DeleteProperty) --K.I.S.S
-
-		// Units (nested under properties)
-		landlord.POST("/properties/:propertyId/newUnit", controllers.CreateUnit)
-		landlord.GET("/properties/:propertyId/units", controllers.ListUnits)
-		landlord.GET("/units/:unitId", controllers.GetUnit)
-		landlord.PUT("/units/:unitId", controllers.UpdateUnit) --At the moment no
-		landlord.DELETE("/units/:unitId", controllers.DeleteUnit) --KISS principle
-
-		// Tenants (assigned to units)
-		landlord.POST("/units/:unitId/tenants", controllers.AddTenant)
-		landlord.GET("/units/:unitId/tenants", controllers.ListTenants)
-		landlord.GET("/tenants/:tenantId", controllers.GetTenant)
-		landlord.PUT("/tenants/:tenantId", controllers.UpdateTenant)
-		landlord.DELETE("/tenants/:tenantId", controllers.RemoveTenant)
-	}
-}
