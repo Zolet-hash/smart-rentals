@@ -8,7 +8,9 @@ type Tenant struct {
 	ID         uint   `json:"id"`
 	TenantName string `json:"tenant_name"`
 	PaymentNo  string `json:"payment_no"`
-	UnitID     Unit   `json:"unit_id"` //FK -> units
+	Rent       string `json:"rent"`
+	UnitID     uint   `json:"unit_id"` //FK -> units table
+	LandlordID uint   `json:"landlord_id"` //FK -> users table
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -16,7 +18,7 @@ type Tenant struct {
 
 type Property struct {
 	ID           uint      `json:"id"`
-	LandlordID   uint      `json:"landlord_id"` //FK userID users table
+	LandlordID   uint      `json:"landlord_id"` //FK userID users table(landlord is a user)
 	Title        string    `json:"title"`
 	Description  string    `json:"description"`
 	Location     string    `json:"location"`
@@ -34,14 +36,15 @@ type Unit struct {
 	UnitName  string    `json:"unit_name"`
 	UnitType  string    `json:"unit_type"`
 	UnitPrice int       `json:"unit_price"`
+	Vacancy   bool      `json:"vacancy"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Payment struct {
 	ID            uint   `json:"id"`
-	TenantID      uint   `json:"tenant_id"`
-	UnitID        uint   `json:"unit_id"`
+	TenantID      uint   `json:"tenant_id"` // FK -> tenants table
+	UnitID        uint   `json:"unit_id"`   // FK -> units table
 	Amount        int    `json:"amount"`
 	PaymentMethod string `json:"payment_method"`
 

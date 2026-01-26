@@ -13,6 +13,7 @@
                                 c) 
 
 2.) -> Admins logs in, he's able to Create user(landlord) etc
+
     ```go
     adminRoutes := r.Group("/sudo")
 	adminRoutes.Use(
@@ -49,17 +50,19 @@ landlord := r.Group("/api/v1")
 
 		// Tenants (assigned to units)
 		landlord.POST("/units/:unitId/addTenant", handlers.CreateTenant(db))
-		//landlord.GET("/units/:unitId/tenants", controllers.ListTenants)
-		//landlord.GET("/tenants/:tenantId", controllers.GetTenant)
-		//landlord.PUT("/tenants/:tenantId", controllers.UpdateTenant)
+		landlord.GET("/units/:unitId/tenants", handlers.ListTenants(db))
+		landlord.GET("/tenants/:tenantId", handlers.GetTenant(db))
+		landlord.PUT("/tenants/:tenantId", handlers.UpdateTenant(db))
 		landlord.DELETE("/tenants/:tenantId", handlers.RemoveTenant(db))
 	}
 ```
 
 I've used jwt as http only cookie to set user id in context and not accept user id from request body ie
- ```json "landlord_id: 1"```; frontend doesnot interact with user id, browser fetches id directly from the server.This avoids CSRF
+ ```json "landlord_id: 1"```; frontend does not interact with user id, browser fetches id directly from the server.This avoids CSRF
 
-Tenant pays normaly from his phone, since we have have his payment no in the database, it will automatically reflect as paid and show balance, just like school fee 
+Tenant pays normaly from his phone, since we have have his payment no in the database, it will automatically reflect as paid and show balance, just like school fee. Customer to Business(C2B) daraja api will apply here
+
+I'll add google auth2.0 last, plus calling my rate limiter function
 
    
     
