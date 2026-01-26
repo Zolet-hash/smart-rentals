@@ -178,7 +178,6 @@ func ListAllTenants(db *database.Database) gin.HandlerFunc {
 
 			if err := rows.Scan(
 				&tenant.ID,
-				&tenant.ID,
 				&tenant.UnitID,
 				&tenant.CreatedAt,
 				&tenant.UpdatedAt,
@@ -281,7 +280,7 @@ func UpdateTenant(db *database.Database) gin.HandlerFunc {
 				rent = COALESCE($3, rent),
 				updated_at = NOW()
 			WHERE id = $4 AND landlord_id = $5
-			RETURNING id, landlord_id, payment_name, payment_no, rent, updated_at
+			RETURNING id, landlord_id, tenant_name, payment_no, rent, updated_at
 		`
 
 		var tenant models.Tenant
@@ -299,7 +298,7 @@ func UpdateTenant(db *database.Database) gin.HandlerFunc {
 			&tenant.PaymentNo,
 			&tenant.Rent,
 			&tenant.CreatedAt,
-			tenant.UpdatedAt,
+			&tenant.UpdatedAt,
 		)
 
 		if err != nil {
