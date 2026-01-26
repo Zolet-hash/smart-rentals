@@ -232,8 +232,7 @@ func ListProperties(db *database.Database) gin.HandlerFunc {
 	}
 }
 
-// Todo
-// func to update propery
+// UpdateProperty performs both partial propery update and full property update
 func UpdateProperty(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Get property ID from URL
