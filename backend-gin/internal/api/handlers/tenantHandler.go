@@ -198,7 +198,6 @@ func ListAllTenants(db *database.Database) gin.HandlerFunc {
 	}
 }
 
-
 func GetTenant(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		idParam := ctx.Param("id")
@@ -214,8 +213,10 @@ func GetTenant(db *database.Database) gin.HandlerFunc {
 				id,
 				landlord_id,
 				tenant_name,
-				payment_no,
+				payment_no1,
+				payment_no2
 				rent,
+				balance,
 				created_at,
 				updated_at
 			FROM tenants
@@ -226,8 +227,10 @@ func GetTenant(db *database.Database) gin.HandlerFunc {
 			&tenant.LandlordID,
 			tenant.UnitID,
 			&tenant.TenantName,
-			&tenant.PaymentNo,
+			&tenant.PaymentNo1,
+			&tenant.PaymentNo2,
 			&tenant.Rent,
+			&tenant.Balance,
 			&tenant.CreatedAt,
 			&tenant.UpdatedAt,
 		)
@@ -264,8 +267,10 @@ func UpdateTenant(db *database.Database) gin.HandlerFunc {
 		//input struct partialy update
 		var input struct {
 			TenantName *string `json:"tenant_name"`
-			PaymentNo  *string `json:"payment_no"`
+			PaymentNo1 *string `json:"payment_no1"`
+			PaymentNo2 *string `json:"payment_no2"`
 			Rent       *string `json:"rent"`
+			Balance    *string `json:"balance"`
 		}
 
 		if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -273,14 +278,16 @@ func UpdateTenant(db *database.Database) gin.HandlerFunc {
 		}
 
 		query := `
-			UPDATE properties
+			UPDATE tenants
 			SET
 				tenant_name = COALESCE($1, tenant_name),
-				payment_no = COALESCE($2, payment_no),
-				rent = COALESCE($3, rent),
+				payment_no1 = COALESCE($2, payment_no1),
+				payment_no2 = COALESCE($3, payment_no2)
+				rent = COALESCE($4, rent),
+				balance = COALESCE($5, balance)
 				updated_at = NOW()
-			WHERE id = $4 AND landlord_id = $5
-			RETURNING id, landlord_id, tenant_name, payment_no, rent, updated_at
+			WHERE id = $5 AND landlord_id = $6
+			RETURNING id, landlord_id, tenant_name, payment_no1, payment_no2, rent, balance, updated_at
 		`
 
 		var tenant models.Tenant
@@ -288,15 +295,19 @@ func UpdateTenant(db *database.Database) gin.HandlerFunc {
 		err := db.DB.QueryRow(
 			query,
 			input.TenantName,
-			input.PaymentNo,
+			input.PaymentNo1,
+			input.PaymentNo2,
 			input.Rent,
+			input.Balance,
 			tenantID,
 			int64(landlordID),
 		).Scan(
 			&tenant.ID,
 			&tenant.TenantName,
-			&tenant.PaymentNo,
+			&tenant.PaymentNo1,
+			&tenant.PaymentNo2,
 			&tenant.Rent,
+			&tenant.Balance,
 			&tenant.CreatedAt,
 			&tenant.UpdatedAt,
 		)
@@ -383,19 +394,19 @@ func RemoveTenant(db *database.Database) gin.HandlerFunc {
 		}
 
 		//Mark unit as vacant
-		_, err = tx.Exec(
-			`
-			UPDATE units
-			SET vacancy = true,
-			    updated_at = NOW()
-			WHERE id = $1
-			`,
-			unitID,
-		)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+		// _, err = tx.Exec(
+		// 	`
+		// 	UPDATE units
+		// 	SET vacancy = true,
+		// 	    updated_at = NOW()
+		// 	WHERE id = $1
+		// 	`,
+		// 	unitID,
+		// )
+		// if err != nil {
+		// 	ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 	return
+		// }
 
 		// Commit transaction
 		if err := tx.Commit(); err != nil {
