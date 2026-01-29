@@ -35,6 +35,7 @@ CREATE TABLE units (
     unit_name       VARCHAR(100) NOT NULL,
     unit_type       VARCHAR(100),
     unit_price      INTEGER NOT NULL,
+    vacancy         BOOLEAN NOT NULL DEFAULT TRUE
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
@@ -60,7 +61,7 @@ CREATE TABLE tenants (
     CONSTRAINT fk_tenants_unit
         FOREIGN KEY (unit_id)
         REFERENCES units (id)
-        ON DELETE RESTRICT
+        ON DELETE RESTRICT,
 
     CONSTRAINT fk_tenant_landlord
         FOREIGN KEY (landlord_id)

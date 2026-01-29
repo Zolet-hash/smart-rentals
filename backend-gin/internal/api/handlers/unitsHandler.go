@@ -12,20 +12,15 @@ import (
 
 func CreateUnit(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var unit models.Unit
+		var input models.CreateUnitInput
 
-		// Bind JSON request body
-		if err := ctx.ShouldBindJSON(&unit); err != nil {
+		// Bind request body
+		if err := ctx.ShouldBindJSON(&input); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		if unit.PropertyID == 0 {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "property_id is required"})
-			return
-		}
-
-		if unit.UnitPrice <= 0 {
+		if input.UnitPrice <= 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "unit_price must be greater than zero"})
 			return
 		}
@@ -33,46 +28,46 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 		// Get landlord ID from JWT
 		userID, exists := ctx.Get("user_id")
 		if !exists {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
 
 		landlordIDFloat, ok := userID.(float64)
 		if !ok || landlordIDFloat <= 0 {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id"})
 			return
 		}
-
 		landlordID := uint(landlordIDFloat)
 
 		// Verify property ownership
-		var existsProperty bool
-		checkQuery := `
+		var ownsProperty bool
+		err := db.DB.QueryRow(
+			`
 			SELECT EXISTS (
-				SELECT 1 FROM properties
+				SELECT 1
+				FROM properties
 				WHERE id = $1 AND landlord_id = $2
 			)
-		`
-
-		err := db.DB.QueryRow(
-			checkQuery,
-			unit.PropertyID,
+			`,
+			input.PropertyID,
 			landlordID,
-		).Scan(&existsProperty)
+		).Scan(&ownsProperty)
 
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		if !existsProperty {
+		if !ownsProperty {
 			ctx.JSON(http.StatusForbidden, gin.H{
-				"error": "You do not own this property",
+				"error": "you do not own this property",
 			})
 			return
 		}
 
-		//Create unit
+		var unit models.Unit
+
+		// Insert unit (vacancy handled by DB default)
 		query := `
 			INSERT INTO units (
 				property_id,
@@ -83,17 +78,18 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 				updated_at
 			)
 			VALUES ($1, $2, $3, $4, NOW(), NOW())
-			RETURNING id, created_at, updated_at
+			RETURNING id, vacancy, created_at, updated_at
 		`
 
 		err = db.DB.QueryRow(
 			query,
-			unit.PropertyID,
-			unit.UnitName,
-			unit.UnitType,
-			unit.UnitPrice,
+			input.PropertyID,
+			input.UnitName,
+			input.UnitType,
+			input.UnitPrice,
 		).Scan(
 			&unit.ID,
+			&unit.Vacancy,
 			&unit.CreatedAt,
 			&unit.UpdatedAt,
 		)
@@ -103,9 +99,15 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
+		unit.PropertyID = input.PropertyID
+		unit.UnitName = input.UnitName
+		unit.UnitType = input.UnitType
+		unit.UnitPrice = input.UnitPrice
+
 		ctx.JSON(http.StatusCreated, unit)
 	}
 }
+
 
 
 func GetUnitsByProperty(db *database.Database) gin.HandlerFunc {
