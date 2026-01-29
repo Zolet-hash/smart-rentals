@@ -1,8 +1,6 @@
 package api
 
 import (
-	"log"
-
 	"github.com/Zolet-hash/smart-rentals/internal/api/handlers"
 	"github.com/Zolet-hash/smart-rentals/internal/api/middleware"
 	"github.com/Zolet-hash/smart-rentals/internal/database"
@@ -10,68 +8,56 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(r *gin.Engine) {
-
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatal("Failed to load config(routes.go)")
-	}
-
-	db, err := database.NewDatabase(cfg.GetDSN())
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
-	}
-	//defer db.DB.Close()
+func SetupRoutes(
+	r *gin.Engine,
+	db *database.Database,
+	cfg *config.Config,
+) {
+	// Global middleware
+	r.Use(middleware.CORS(cfg))
 
 	authHandler := handlers.NewAuthHandler(db, []byte(cfg.JWT.Secret))
 
-	// Public routes
-	public := r.Group("/api/v1")
-	{
-		public.POST("/login", authHandler.Login)
-		public.POST("/mpesa/confirmation", handlers.MpesaPaymentConfirmation(db))
-	}
+	// API v1
+	api := r.Group("/api/v1")
 
-	adminRoutes := r.Group("/sudo")
-	adminRoutes.Use(
-		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), //sets uuid in context
-		middleware.RequireRole(db, "admin"),               //checks role
+	// Public routes
+	api.POST("/login", authHandler.Login)
+	api.POST("/mpesa/confirmation", handlers.MpesaPaymentConfirmation(db))
+
+	// Admin routes
+	admin := r.Group("/sudo")
+	admin.Use(
+		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), // sets user_id
+		middleware.RequireRole(db, "admin"),               // enforces role
 	)
 	{
-		adminRoutes.POST("register", authHandler.Register) //register landlord
-		//admin.GET("/users", controllers.ListLandlords) --no at the moment
- 		//admin.GET("/users/:id", controllers.GetLandlord) --since we only have 1 landlord
- 		//admin.PATCH("/users/:id", controllers.Updatelandlord)
-		//admin.DELETE("/users/:id", controllers.Deletelandlord)
+		admin.POST("/register", authHandler.Register)
 	}
 
-
-	// LANDLORD ROUTES
-	landlord := r.Group("/api/v1")
-	landlord.Use(middleware.AuthMiddleware([]byte(cfg.JWT.Secret)))
+	// Landlord routes
+	landlord := api.Group("/")
+	landlord.Use(
+		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)),
+	)
 	{
 		// Properties
-		landlord.POST("/properties/newProperty", handlers.CreateProperty(db))
-		landlord.GET("/properties/myProperties", handlers.ListProperties(db))
+		landlord.POST("/properties", handlers.CreateProperty(db))
+		landlord.GET("/properties", handlers.ListProperties(db))
 		landlord.GET("/properties/:propertyId", handlers.GetProperty(db))
-		landlord.PATCH("/properties/:updatePropertyByID", handlers.UpdateProperty(db))
-		//landlord.DELETE("/properties/:propertyId", controllers.DeleteProperty) //--K.I.S.S
+		landlord.PATCH("/properties/:propertyId", handlers.UpdateProperty(db))
 
-		// Units (nested under properties)
-		landlord.POST("/properties/:propertyId/newUnit", handlers.CreateUnit(db))
+		// Units
+		landlord.POST("/properties/:propertyId/units", handlers.CreateUnit(db))
 		landlord.GET("/properties/:propertyId/units", handlers.GetUnitsByProperty(db))
-		//landlord.GET("/units/:unitId", controllers.GetUnit) --jj
-	    //landlord.PUT("/units/:unitId", controllers.UpdateUnit)
-		//landlord.DELETE("/units/:unitId", controllers.DeleteUnit) --ii
 
-		// Tenants (assigned to units)
-		landlord.POST("/units/:unitId/addTenant", handlers.CreateTenant(db))
-		landlord.GET("/units/:unitId/myTenants", handlers.ListAllTenants(db))
+		// Tenants
+		landlord.POST("/units/:unitId/tenants", handlers.CreateTenant(db))
+		landlord.GET("/units/:unitId/tenants", handlers.ListAllTenants(db))
 		landlord.GET("/tenants/:tenantId", handlers.GetTenant(db))
 		landlord.PUT("/tenants/:tenantId", handlers.UpdateTenant(db))
 		landlord.DELETE("/tenants/:tenantId", handlers.RemoveTenant(db))
 	}
-
 }
 
 func getUserProfile(c *gin.Context) {
@@ -83,4 +69,3 @@ func getUserProfile(c *gin.Context) {
 		"email":   email,
 	})
 }
-
