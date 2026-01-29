@@ -89,19 +89,18 @@ EXECUTE FUNCTION set_default_balance();
 --incase a landlord uses till
 CREATE TABLE tills (
     id              BIGSERIAL PRIMARY KEY,
-    till_number     INTEGER NOT NULL,
-    landlord_id     BIGINT NOT NULL REFERENCES landlords(id),
-    active          BOOLEAN DEFAULT true,
+    till_number     VARCHAR(100) NOT NULL,
+    landlord_id     BIGINT NOT NULL REFERENCES users(id),
+    active          BOOLEAN DEFAULT true
 );
 
 CREATE TABLE paybills (
     id              BIGSERIAL PRIMARY KEY,
-    paybill         INTEGER NOT NULL,
-    account_number  INTEGER NOT NULL,
-    landlord_id     BIGINT NOT NULL REFERENCES landlords(id),
-    active          BOOLEAN DEFAULT true,
-
-)
+    paybill         VARCHAR(100) NOT NULL, --
+    account_number  VARCHAR(100) NOT NULL, --VARCHAR
+    landlord_id     BIGINT NOT NULL REFERENCES users(id),
+    active          BOOLEAN DEFAULT true
+);
 
 CREATE TABLE till_transactions (
     id                  BIGSERIAL PRIMARY KEY,
@@ -110,9 +109,9 @@ CREATE TABLE till_transactions (
     phone_number        VARCHAR(100) NOT NULL,
     amount              NUMERIC(12,2),
     trans_time          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    tenant_id           INTEGER NOT NULL,
-    landlord_id         INTEGER NOT NULL,
-)
+    tenant_id           INTEGER NOT NULL REFERENCES tenants(id),
+    landlord_id         INTEGER NOT NULL REFERENCES users(id)
+);
 
 CREATE TABLE paybill_transactions (
     id                  BIGSERIAL PRIMARY KEY,
@@ -122,7 +121,7 @@ CREATE TABLE paybill_transactions (
     phone_number        VARCHAR(100) NOT NULL,
     amount              NUMERIC(12,2),
     trans_time          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    tenant_id           INTEGER NOT NULL,
-    landlord_id         INTEGER NOT NULL,
-)
+    tenant_id           INTEGER NOT NULL REFERENCES tenants(id),
+    landlord_id         INTEGER NOT NULL REFERENCES users(id)
+);
 

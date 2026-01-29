@@ -29,6 +29,7 @@ func SetupRoutes(r *gin.Engine) {
 	public := r.Group("/api/v1")
 	{
 		public.POST("/login", authHandler.Login)
+		public.POST("/mpesa/confirmation", handlers.MpesaPaymentConfirmation(db))
 	}
 
 	adminRoutes := r.Group("/sudo")
