@@ -20,6 +20,9 @@ func CreateTenant(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
+		tenant.PaymentNo1 = normalizePhone(tenant.PaymentNo1)
+		tenant.PaymentNo2 = normalizePhone(tenant.PaymentNo2)
+
 		if tenant.UnitID == 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "unit_id is required"})
 			return
