@@ -22,7 +22,10 @@ func SetupRoutes(
 	api := r.Group("/api/v1")
 
 	// Public routes
-	api.POST("/login", authHandler.Login)
+	api.POST("/login",
+		middleware.RateLimiter(),  // <- limit requests
+		authHandler.Login,
+	)
 	api.POST("/mpesa/confirmation", handlers.MpesaPaymentConfirmation(db))
 
 	// Admin routes
