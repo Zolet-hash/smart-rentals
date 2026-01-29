@@ -113,7 +113,7 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 func GetUnitsByProperty(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Parse property ID
-		idParam := ctx.Param("id")
+		idParam := ctx.Param("unitID")
 		propertyID, err := strconv.ParseInt(idParam, 10, 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{

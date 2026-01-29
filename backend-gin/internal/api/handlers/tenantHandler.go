@@ -225,7 +225,7 @@ func ListAllTenants(db *database.Database) gin.HandlerFunc {
 func GetTenant(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Parse tenant ID
-		tenantID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+		tenantID, err := strconv.ParseUint(ctx.Param("tenantID"), 10, 64)
 		if err != nil || tenantID == 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid tenant id"})
 			return
@@ -292,7 +292,7 @@ func GetTenant(db *database.Database) gin.HandlerFunc {
 func UpdateTenant(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Parse tenant ID
-		tenantID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+		tenantID, err := strconv.ParseUint(ctx.Param("tenantID"), 10, 64)
 		if err != nil || tenantID == 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid tenant id"})
 			return
@@ -387,7 +387,7 @@ func UpdateTenant(db *database.Database) gin.HandlerFunc {
 func RemoveTenant(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Parse tenant ID
-		tenantID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+		tenantID, err := strconv.ParseUint(ctx.Param("tenantID"), 10, 64)
 		if err != nil || tenantID == 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid tenant id"})
 			return
