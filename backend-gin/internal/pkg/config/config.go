@@ -41,7 +41,7 @@ func Load() (*Config, error) {
 	cfg.Server.Host = getEnv("SERVER_HOST", "0.0.0.0")
 
 	//Database config
-	cfg.Database.Host = getEnv("DB_HOST", "loacalhost")
+	cfg.Database.Host = getEnv("DB_HOST", "localhost")
 	cfg.Database.Port = getEnv("DB_PORT", "5432")
 	cfg.Database.User = getEnv("DB_USER", "zoet")
 	cfg.Database.Password = getEnv("DB_PASSWORD", "")
