@@ -160,12 +160,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// })
 
 	// Set JWT as HttpOnly cookie
+	c.SetSameSite(http.SameSiteLaxMode) //prevents CSRF
 	c.SetCookie(
 		"access_token",
 		tokenString,
 		int(h.tokenExpiration.Seconds()),
 		"/",
-		"localhost", // change to your domain in prod
+		"", // current host
 		false,       // secure (true in HTTPS)
 		true,        // httpOnly (IMPORTANT)
 	)
