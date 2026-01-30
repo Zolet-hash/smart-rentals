@@ -26,6 +26,7 @@ func SetupRoutes(
 		middleware.RateLimiter(),  // <- limit requests
 		authHandler.Login,
 	)
+	api.POST("/mpesa/validation", handlers.MpesaValidation)
 	api.POST("/mpesa/confirmation", handlers.MpesaPaymentConfirmation(db))
 
 	// Admin routes
@@ -46,6 +47,8 @@ func SetupRoutes(
 	{
 		// Properties
 		landlord.POST("/properties", handlers.CreateProperty(db))
+		landlord.POST("/paybill", handlers.CreatePaybill(db))
+		landlord.POST("/till", handlers.CreateTill(db))
 		landlord.GET("/properties", handlers.ListProperties(db))
 		landlord.GET("/properties/:propertyId", handlers.GetProperty(db))
 		landlord.PATCH("/properties/:propertyId", handlers.UpdateProperty(db))
