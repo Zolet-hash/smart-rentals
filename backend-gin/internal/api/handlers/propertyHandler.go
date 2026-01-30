@@ -82,7 +82,7 @@ func CreateProperty(db *database.Database) gin.HandlerFunc {
 // Gets a property by property id
 func GetProperty(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		idParam := ctx.Param("propertyID")
+		idParam := ctx.Param("propertyId")
 		propertyID, err := strconv.ParseInt(idParam, 10, 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid property id"})
@@ -236,7 +236,7 @@ func ListProperties(db *database.Database) gin.HandlerFunc {
 func UpdateProperty(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Get property ID from URL
-		propertyID := ctx.Param("propertyID")
+		propertyID := ctx.Param("propertyId")
 		if propertyID == "" {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Property ID required"})
 			return
