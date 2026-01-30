@@ -64,7 +64,100 @@ Tenant pays normaly from his phone, since we have have his payment no in the dat
 
 I'll add google auth2.0 last, plus calling my rate limiter function
 
-   
+
+# MPESA C2B Integration Flow (Landlord / Property System)
+
+This document explains how the system handles **landlord properties, paybills, tills, and MPESA payments**.  
+
+---
+
+## 1️⃣ Landlord Creates a Property and Adds a Paybill
+
+When a landlord creates a property and adds a Paybill/Till:
+
+1. **Function:** `CreatePaybill`  
+2. **Actions:**
+   - Inserts a new paybill into the `paybills` table.
+   - Links the paybill to the landlord.
+   - Associates it with a `daraja_apps` record (creating one if none exists for this landlord).
+3. **Automatic Actions:**
+   - Calls `RegisterDarajaCallbacks`:
+     - Uses `GetDarajaAccessToken` to authenticate with Safaricom Daraja.
+     - Registers the `ValidationURL` and `ConfirmationURL` for the paybill.
+   - Marks `callback_registered = true` in the database once successful.
+4. **Secrets Handling:**
+   - Consumer key, consumer secret, and passkey are stored **encrypted** in `daraja_apps`.
+
+**Outcome:**  
+The Paybill is now **active in Daraja** and ready to receive payments.
+Same as Till
+
+---
+
+## 2️⃣ Tenant Makes a Payment
+
+When a tenant pays rent via MPESA:
+
+1. **Daraja C2B Flow:**
+   1. MPESA sends a **Validation request** to `/mpesa/validation`.
+   2. The handler responds with:
+
+   ```json
+   {"ResultCode":0,"ResultDesc":"Accepted"}
+   ```
+
+   3. MPESA sends a Confirmation request to `/mpesa/confirmation`.
+
+   4. **Function:** `MpesaPaymentConfirmation`
+
+	**Actions:**
+		-Normalizes tenant phone numbers.
+		-Detects whether the transaction is a Paybill or Till payment.
+		-Finds the tenant associated with the phone number and property.
+		-Inserts a transaction into the appropriate table:
+
+##  3️⃣ paybill_transactions or till_transactions.
+
+Updates the tenant’s balance.
+
+Enforces idempotency (duplicate TransIDs are ignored).
+
+**Outcome:**
+Payment is processed automatically, tenant balance updated, and the transaction is logged for the landlord’s property.
+
+## 4 Multiple Properties / Shared Tills
+
+	- Multiple properties can share the same Till number:
+	- The system identifies the landlord from the till number.
+	- Matches tenant by phone number.
+	- Applies the payment correctly.
+	- Each Paybill is registered individually in Daraja for each property.
+	- Shared Till numbers do not require multiple registrations.
+
+## Example Confirmation payload
+```json
+{
+  "BusinessShortCode": "600000",
+  "BillRefNumber": "A101",
+  "MSISDN": "254708374149",
+  "TransAmount": 100,
+  "TransID": "TEST123",
+  "TransTime": "20240101123045"
+}
+```
+## Normalized Payment stored in DB
+```json
+{
+  "Provider": "MPESA",
+  "Channel": "PAYBILL",
+  "BusinessID": "600000",
+  "AccountRef": "A101",
+  "Phone": "254708374149",
+  "Amount": 100,
+  "Receipt": "TEST123"
+}
+```
+
     
 
     
