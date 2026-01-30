@@ -14,18 +14,28 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var input models.CreateUnitInput
 
-		// Bind request body
+		// Bind JSON body (unit_name, unit_type, unit_price)
 		if err := ctx.ShouldBindJSON(&input); err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
+		// Validate unit_price
 		if input.UnitPrice <= 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "unit_price must be greater than zero"})
 			return
 		}
 
-		// Get landlord ID from JWT
+		//Get property ID from URL
+		propertyIdParam := ctx.Param("propertyId")
+		propertyID, err := strconv.ParseUint(propertyIdParam, 10, 64)
+		if err != nil || propertyID == 0 {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid property id"})
+			return
+		}
+		input.PropertyID = uint(propertyID)
+
+		// Get landlord ID from JWT (set by auth middleware)
 		userID, exists := ctx.Get("user_id")
 		if !exists {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
@@ -39,19 +49,15 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 		}
 		landlordID := uint(landlordIDFloat)
 
-		// Verify property ownership
+		//Verify property ownership
 		var ownsProperty bool
-		err := db.DB.QueryRow(
-			`
+		err = db.DB.QueryRow(`
 			SELECT EXISTS (
 				SELECT 1
 				FROM properties
 				WHERE id = $1 AND landlord_id = $2
 			)
-			`,
-			input.PropertyID,
-			landlordID,
-		).Scan(&ownsProperty)
+		`, input.PropertyID, landlordID).Scan(&ownsProperty)
 
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -59,15 +65,12 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 		}
 
 		if !ownsProperty {
-			ctx.JSON(http.StatusForbidden, gin.H{
-				"error": "you do not own this property",
-			})
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "you do not own this property"})
 			return
 		}
 
+		//Insert unit into DB
 		var unit models.Unit
-
-		// Insert unit (vacancy handled by DB default)
 		query := `
 			INSERT INTO units (
 				property_id,
@@ -99,6 +102,7 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
+		//Populate unit struct to return in response
 		unit.PropertyID = input.PropertyID
 		unit.UnitName = input.UnitName
 		unit.UnitType = input.UnitType
@@ -108,12 +112,10 @@ func CreateUnit(db *database.Database) gin.HandlerFunc {
 	}
 }
 
-
-
 func GetUnitsByProperty(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Parse property ID
-		idParam := ctx.Param("unitID")
+		idParam := ctx.Param("propertyId")
 		propertyID, err := strconv.ParseInt(idParam, 10, 64)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{
