@@ -23,7 +23,7 @@ func SetupRoutes(
 
 	// Public routes
 	api.POST("/login",
-		middleware.RateLimiter(),  // <- limit requests
+		middleware.RateLimiter(), // <- limit requests
 		authHandler.Login,
 	)
 	api.POST("/mpesa/validation", handlers.MpesaValidation)
@@ -59,10 +59,10 @@ func SetupRoutes(
 
 		// Tenants
 		landlord.POST("/units/:unitId/tenants", handlers.CreateTenant(db))
-		landlord.GET("/units/:unitId/tenants", handlers.ListAllTenants(db))
-		landlord.GET("/tenants/:tenantId", handlers.GetTenant(db))
-		landlord.PUT("/tenants/:tenantId", handlers.UpdateTenant(db))
-		landlord.DELETE("/tenants/:tenantId", handlers.RemoveTenant(db))
+		landlord.GET("/properties/:propertyId/tenants", handlers.ListPropertyTenants(db))
+		landlord.GET("/properties/:propertyId/tenants/:tenantId", handlers.GetPropertyTenant(db))
+		landlord.PATCH("/properties/:propertyId/tenants/:tenantId", handlers.UpdatePropertyTenant(db))
+		landlord.DELETE("/properties/:propertyId/tenants/:tenantId", handlers.RemovePropertyTenant(db))
 	}
 }
 

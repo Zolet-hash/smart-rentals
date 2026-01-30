@@ -64,7 +64,7 @@ type Unit struct {
 
 // helper struct for creating unit
 type CreateUnitInput struct {
-	PropertyID uint    `json:"property_id" binding:"required"`
+	PropertyID uint    `json:"-"`
 	UnitName   string  `json:"unit_name" binding:"required"`
 	UnitType   string  `json:"unit_type"`
 	UnitPrice  float64 `json:"unit_price" binding:"required"`

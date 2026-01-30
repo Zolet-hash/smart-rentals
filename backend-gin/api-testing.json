@@ -1,0 +1,138 @@
+create unit
+{
+  "property_id": 1,
+  "unit_name": "B-202",
+  "unit_type": "One bedroom",
+  "vacancy": true,
+  "unit_price": 1800
+}
+
+register user
+{
+  "email": "haha26@gmail.com",
+  "password": "Amgsl63@must",
+  "full_name": "Emmanuel Sulwe",
+  "phone": "0724600786",
+  "role": "landlord"
+}
+
+curl -X POST https://unsolemnly-unsandaled-doris.ngrok-free.dev/sudo/register   -H "Content-Type: application/json"   -H "Accept: application/json"   -d '{
+    "email": "devzolet@gmail.com",
+    "password": "Amgsl63@must",
+    "full_name": "Emmanuel Sulwe",
+    "phone": "0724600786",
+    "role": "landlord"
+  }'
+
+curl -c cookies.txt -X POST \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "devzolet@gmail.com",
+    "password": "Amgsl63@must"
+  }'
+
+--------------------------
+Create a property
+-----------------------------
+curl -b cookies.txt -X POST \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties \
+  -H "Content-Type: application/json" \
+  -d '{
+     "title": "Roaming chef apartments",
+     "description": "A students standard place",
+     "location": "Kibabii",
+     "property_type": "apartments",
+     "vacancy": true,
+     "total_rent": 35000
+  }'
+
+----------------------------
+Get all properties
+------------------------------
+curl -b cookies.txt -X GET \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties \
+  -H "Accept: application/json"
+
+-------------------------------
+Get property by id
+----------------------------------
+curl -b cookies.txt -X GET \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties/123 \
+  -H "Accept: application/json"
+
+------------------------------------------
+partialy update a property
+-----------------------------------------
+curl -b cookies.txt -X PATCH \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+     "title": "Roaming chef apartments2",
+     "description": "A students standard place1",
+     "property_type": "apartments",
+     "vacancy": false,
+     "total_rent": 75000
+  }'
+
+-------------------------------------
+create unit in a property
+--------------------------------------
+curl -b cookies.txt -X POST \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties/1/units \
+  -H "Content-Type: application/json" \
+  -d '{
+     "unit_name": "B-202",
+     "unit_type": "One bedroom",
+     "unit_price": 10000
+  }'
+
+---------------------------------------
+get all units in a property
+---------------------------------------
+curl -b cookies.txt -X GET \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties/1/units \
+  -H "Accept: application/json"
+
+------------------------------------------
+Create tenant
+------------------------------------------
+curl -b cookies.txt -X POST \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/units/1/tenants \
+  -H "Content-Type: application/json" \
+  -d '{
+     "tenant_name": "Gilbert Obonyo",
+     "payment_no1": "012400786",
+     "payment_no2": "07577221887",
+     "rent":        4500
+  }'
+
+===============================
+list all tenants in a property
+==================================
+curl -b cookies.txt -X GET \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties/1/tenants \
+  -H "Accept: application/json"
+
+===================================
+Get a specific tenant in a property
+===================================
+curl -b cookies.txt -X GET \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties/1/tenants/5 \
+  -H "Accept: application/json"
+
+==============================================
+partially update a specific tenant in a property
+================================================
+curl -b cookies.txt -X PATCH \
+  https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties/1/tenants/5 \
+  -H "Content-Type: application/json" \
+  -d '{
+     "tenant_name": "Gilbert Obonyo Jr",
+     "rent": 4800
+  }'
+
+====================================================
+Remove tenant from a property
+====================================================
+curl -b cookies.txt -X DELETE   https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/properties/1/tenants/7   -H "Accept: application/json"
