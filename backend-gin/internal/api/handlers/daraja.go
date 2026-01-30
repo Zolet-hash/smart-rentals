@@ -53,6 +53,14 @@ func normalizePhone(msisdn string) string {
 	}
 }
 
+func MpesaValidation(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"ResultCode": 0,
+		"ResultDesc": "Accepted",
+	})
+}
+
+
 func MpesaPaymentConfirmation(db *database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var payload MpesaConfirmationPayload
