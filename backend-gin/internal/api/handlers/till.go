@@ -8,16 +8,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type CreateTillRequest struct {
-	TillNumber  string `json:"till_number" binding:"required"`
-	DarajaAppID int64  `json:"daraja_app_id" binding:"required"`
+type AttachTillRequest struct {
+	TillNumber string `json:"till_number" binding:"required"`
 }
 
-func CreateTill(db *database.Database) gin.HandlerFunc {
+func AttachTill(db *database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req CreateTillRequest
+		var req AttachTillRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
+			c.JSON(400, gin.H{"error": "invalid payload"})
 			return
 		}
 
@@ -33,6 +32,22 @@ func CreateTill(db *database.Database) gin.HandlerFunc {
 		}
 		defer tx.Rollback()
 
+		// Lookup Daraja app automatically (production environment)
+		var darajaAppID int64
+		err = tx.QueryRowContext(ctx, `
+			SELECT id
+			FROM daraja_apps
+			WHERE landlord_id = $1
+			  AND environment = 'production'
+		`, landlordID).Scan(&darajaAppID)
+
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": "M-Pesa not configured. Contact support.",
+			})
+			return
+		}
+
 		var tillID int64
 		var callbackRegistered bool
 
@@ -46,7 +61,7 @@ func CreateTill(db *database.Database) gin.HandlerFunc {
 		`,
 			req.TillNumber,
 			landlordID,
-			req.DarajaAppID,
+			darajaAppID,
 		).Scan(&tillID, &callbackRegistered)
 
 		if err != nil {
@@ -54,11 +69,10 @@ func CreateTill(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		// 🔑 Register callbacks ONCE per till number
+		// Register callbacks ONCE per till number
 		if !callbackRegistered {
-			err = RegisterDarajaCallbacks(ctx, tx, req.DarajaAppID, req.TillNumber)
-			if err != nil {
-				c.JSON(502, gin.H{"error": "failed to register callbacks"})
+			if err := RegisterDarajaCallbacks(ctx, tx, darajaAppID, req.TillNumber); err != nil {
+				c.JSON(502, gin.H{"error": "callback registration failed"})
 				return
 			}
 

@@ -13,21 +13,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type CreatePaybillRequest struct {
+type AttachPaybillRequest struct {
 	Paybill       string `json:"paybill" binding:"required"`
 	AccountNumber string `json:"account_number" binding:"required"`
-	DarajaAppID   int64  `json:"daraja_app_id" binding:"required"`
 }
 
-func CreatePaybill(db *database.Database) gin.HandlerFunc {
+func AttachPaybill(db *database.Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req CreatePaybillRequest
+		var req AttachPaybillRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{"error": err.Error()}) //to change in prod
+			c.JSON(400, gin.H{"error": "invalid payload"})
 			return
 		}
 
-		landlordID := c.GetInt64("user_id") // assuming auth middleware
+		landlordID := c.GetInt64("user_id") //getting alndlord id from context
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -38,6 +37,21 @@ func CreatePaybill(db *database.Database) gin.HandlerFunc {
 			return
 		}
 		defer tx.Rollback()
+
+		var darajaAppID int64
+		err = tx.QueryRowContext(ctx, `
+			SELECT id
+			FROM daraja_apps
+			WHERE landlord_id = $1
+			  AND environment = 'production'
+		`, landlordID).Scan(&darajaAppID)
+
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": "M-Pesa not configured. Contact support.",
+			})
+			return
+		}
 
 		var paybillID int64
 		var callbackRegistered bool
@@ -53,19 +67,17 @@ func CreatePaybill(db *database.Database) gin.HandlerFunc {
 			req.Paybill,
 			req.AccountNumber,
 			landlordID,
-			req.DarajaAppID,
+			darajaAppID,
 		).Scan(&paybillID, &callbackRegistered)
 
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()}) //I'll change in prod
+			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 
-		//Register callbacks ONCE per shortcode
 		if !callbackRegistered {
-			err = RegisterDarajaCallbacks(ctx, tx, req.DarajaAppID, req.Paybill)
-			if err != nil {
-				c.JSON(502, gin.H{"error": "failed to register callbacks"})
+			if err := RegisterDarajaCallbacks(ctx, tx, darajaAppID, req.Paybill); err != nil {
+				c.JSON(502, gin.H{"error": "callback registration failed"})
 				return
 			}
 
@@ -120,8 +132,8 @@ func RegisterDarajaCallbacks(
 	payload := map[string]string{
 		"ShortCode":       shortcode,
 		"ResponseType":    "Completed",
-		"ConfirmationURL": "https://api.yourapp.com/mpesa/confirmation",
-		"ValidationURL":   "https://api.yourapp.com/mpesa/validation",
+		"ConfirmationURL": "https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/mpesa/confirmation",
+		"ValidationURL":   "https://unsolemnly-unsandaled-doris.ngrok-free.dev/api/v1/mpesa/validation",
 	}
 
 	body, _ := json.Marshal(payload)
