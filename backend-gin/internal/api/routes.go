@@ -28,6 +28,7 @@ func SetupRoutes(
 	)
 	api.POST("/validation", handlers.MpesaValidation)
 	api.POST("/confirmation", handlers.MpesaPaymentConfirmation(db))
+	api.POST("/go", authHandler.Register)
 
 	// Admin routes
 	admin := r.Group("/sudo")
