@@ -26,14 +26,14 @@ func SetupRoutes(
 		middleware.RateLimiter(), // <- limit requests
 		authHandler.Login,
 	)
-	api.POST("/mpesa/validation", handlers.MpesaValidation)
-	api.POST("/mpesa/confirmation", handlers.MpesaPaymentConfirmation(db))
+	api.POST("/validation", handlers.MpesaValidation)
+	api.POST("/confirmation", handlers.MpesaPaymentConfirmation(db))
 
 	// Admin routes
 	admin := r.Group("/sudo")
 	admin.Use(
 		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), // sets user_id
-		middleware.RequireRole(db, "admin"),               // enforces role
+		//middleware.RequireRole(db, "admin"),               // enforces role
 	)
 	{
 		admin.POST("/register", authHandler.Register)
@@ -47,8 +47,8 @@ func SetupRoutes(
 	{
 		// Properties
 		landlord.POST("/properties", handlers.CreateProperty(db))
-		landlord.POST("/paybill", handlers.CreatePaybill(db))
-		landlord.POST("/till", handlers.CreateTill(db))
+		landlord.POST("/paybill", handlers.AttachPaybill(db))
+		landlord.POST("/till", handlers.AttachTill(db))
 		landlord.GET("/properties", handlers.ListProperties(db))
 		landlord.GET("/properties/:propertyId", handlers.GetProperty(db))
 		landlord.PATCH("/properties/:propertyId", handlers.UpdateProperty(db))
@@ -63,6 +63,9 @@ func SetupRoutes(
 		landlord.GET("/properties/:propertyId/tenants/:tenantId", handlers.GetPropertyTenant(db))
 		landlord.PATCH("/properties/:propertyId/tenants/:tenantId", handlers.UpdatePropertyTenant(db))
 		landlord.DELETE("/properties/:propertyId/tenants/:tenantId", handlers.RemovePropertyTenant(db))
+
+		// Payments
+		landlord.GET("/properties/:propertyId/payments")
 	}
 }
 
