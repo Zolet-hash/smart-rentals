@@ -16,12 +16,13 @@ type Config struct {
 		WriteTimeout time.Duration
 	}
 	Database struct {
-		Host     string
-		Port     string
-		User     string
-		Password string
-		DBName   string
-		SSLMode  string
+		Host        string
+		Port        string
+		User        string
+		Password    string
+		DBName      string
+		SSLMode     string
+		DatabaseURL string
 	}
 	JWT struct {
 		Secret        string
@@ -32,28 +33,41 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	godotenv.Load() //Load .env if exists
+	// Load .env for local development only
+	_ = godotenv.Load()
 
 	cfg := &Config{}
 
-	//Server config
-	cfg.Server.Port = getEnv("SERVER_PORT", "8080")
+	// Server config
+	// Railway uses PORT, local dev can use SERVER_PORT
+	cfg.Server.Port = getEnv("PORT", getEnv("SERVER_PORT", "8080"))
 	cfg.Server.Host = getEnv("SERVER_HOST", "0.0.0.0")
 
-	//Database config
+	cfg.Server.ReadTimeout = 10 * time.Second
+	cfg.Server.WriteTimeout = 10 * time.Second
+
+	// Database config
+	// Railway provides DATABASE_URL (preferred)
+	cfg.Database.DatabaseURL = os.Getenv("DATABASE_URL")
+
+	// Fallback for local development
 	cfg.Database.Host = getEnv("DB_HOST", "localhost")
 	cfg.Database.Port = getEnv("DB_PORT", "5432")
 	cfg.Database.User = getEnv("DB_USER", "zoet")
 	cfg.Database.Password = getEnv("DB_PASSWORD", "")
 	cfg.Database.DBName = getEnv("DB_NAME", "auth_service")
-	cfg.Database.SSLMode = getEnv("DB_SSLMODE", "disable")
 
-	//JWT config
-	cfg.JWT.Secret = getEnv("JWT_SECRET", "") //...
-	cfg.JWT.TokenExpiry = time.Hour * 24      //24 hours
-	cfg.JWT.RefreshExpiry = time.Hour * 168   //7 days
+	// Default to require SSL (Railway needs this)
+	cfg.Database.SSLMode = getEnv("DB_SSLMODE", "require")
 
+	// JWT config
+	cfg.JWT.Secret = getEnv("JWT_SECRET", "")
+	cfg.JWT.TokenExpiry = time.Hour * 24      // 24 hours
+	cfg.JWT.RefreshExpiry = time.Hour * 168   // 7 days
+
+	// Environment
 	cfg.Environment = getEnv("ENV", "development")
+
 	return cfg, nil
 }
 
@@ -64,8 +78,16 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
+// GetDSN returns the correct database connection string
 func (c *Config) GetDSN() string {
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+	// Prefer Railway / production connection
+	if c.Database.DatabaseURL != "" {
+		return c.Database.DatabaseURL
+	}
+
+	// Fallback for local development
+	return fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		c.Database.Host,
 		c.Database.Port,
 		c.Database.User,
