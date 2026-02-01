@@ -33,7 +33,7 @@ func SetupRoutes(
 	admin := r.Group("/sudo")
 	admin.Use(
 		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), // sets user_id
-		//middleware.RequireRole(db, "admin"),               // enforces role
+		//middleware.RequireRole(db, "admin"),               // enforces role j
 	)
 	{
 		admin.POST("/register", authHandler.Register)
