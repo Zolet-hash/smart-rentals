@@ -32,7 +32,7 @@ func SetupRoutes(
 	// Admin routes
 	admin := r.Group("/sudo")
 	admin.Use(
-		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), // sets user_id
+		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), // secret from env
 		
 	)
 	{
