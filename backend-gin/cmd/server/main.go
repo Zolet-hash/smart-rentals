@@ -36,6 +36,6 @@ func main() {
 	log.Printf("Server starting on %s", addr)
 
 	if err := r.Run(addr); err != nil {
-		log.Fatal("Server failed to start:", err)
+		log.Fatal("Server failed to start:", err) //redeploy
 	}
 }
