@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// CORS returns a Gin middleware configured for Vercel + local dev + previews
 func CORS() gin.HandlerFunc {
 	frontendURL := os.Getenv("FRONTEND_URL") // e.g., https://my-app.vercel.app
 
@@ -17,9 +18,16 @@ func CORS() gin.HandlerFunc {
 			frontendURL,             // production
 			"http://localhost:3000", // local dev
 		},
+		// Support Vercel preview deployments
 		AllowOriginFunc: func(origin string) bool {
-			// Allow Vercel preview deployments (*.vercel.app)
-			return origin != "" && (origin == frontendURL || origin == "http://localhost:3000" || strings.HasSuffix(origin, ".vercel.app"))
+			if origin == "" {
+				return false
+			}
+			if origin == frontendURL || origin == "http://localhost:3000" {
+				return true
+			}
+			// Allow any *.vercel.app preview
+			return strings.HasSuffix(origin, ".vercel.app")
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},

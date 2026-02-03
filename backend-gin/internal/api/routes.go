@@ -14,7 +14,7 @@ func SetupRoutes(
 	cfg *config.Config,
 ) {
 	// Global middleware
-	r.Use(middleware.CORS(cfg))
+	r.Use(middleware.CORS())
 
 	authHandler := handlers.NewAuthHandler(db, []byte(cfg.JWT.Secret))
 
@@ -67,6 +67,7 @@ func SetupRoutes(
 
 		// Payments
 		landlord.GET("/properties/:propertyId/payments")
+		landlord.POST("/confirmation-message", handlers.RecordSendMoney(db))
 	}
 }
 
