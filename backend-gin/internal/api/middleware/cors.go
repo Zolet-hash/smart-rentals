@@ -1,33 +1,30 @@
 package middleware
 
 import (
-	"net/http"
+	"os"
+	"strings"
+	"time"
 
-	"github.com/Zolet-hash/smart-rentals/internal/pkg/config"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
-func CORS(cfg *config.Config) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
+func CORS() gin.HandlerFunc {
+	frontendURL := os.Getenv("FRONTEND_URL") // e.g., https://my-app.vercel.app
 
-		// Explicit origin (NOT *)
-		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set(
-			"Access-Control-Allow-Headers",
-			"Content-Type",
-		)
-		c.Writer.Header().Set(
-			"Access-Control-Allow-Methods",
-			"GET, POST, PUT, DELETE, OPTIONS",
-		)
-
-		if c.Request.Method == http.MethodOptions {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
+	return cors.New(cors.Config{
+		AllowOrigins: []string{
+			frontendURL,             // production
+			"http://localhost:3000", // local dev
+		},
+		AllowOriginFunc: func(origin string) bool {
+			// Allow Vercel preview deployments (*.vercel.app)
+			return origin != "" && (origin == frontendURL || origin == "http://localhost:3000" || strings.HasSuffix(origin, ".vercel.app"))
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	})
 }
