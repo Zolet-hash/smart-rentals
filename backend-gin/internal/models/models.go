@@ -18,24 +18,23 @@ type Tenant struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-//used for sql joins, joining tenant to unit
+// used for sql joins, joining tenant to unit
 type TenantWithUnit struct {
-	ID          uint      `json:"id"`
-	TenantName  string    `json:"tenant_name"`
-	PaymentNo1  string    `json:"payment_no1"`
-	PaymentNo2  string    `json:"payment_no2"`
-	Rent        float64   `json:"rent"`
-	Balance     float64   `json:"balance"`
+	ID         uint    `json:"id"`
+	TenantName string  `json:"tenant_name"`
+	PaymentNo1 string  `json:"payment_no1"`
+	PaymentNo2 string  `json:"payment_no2"`
+	Rent       float64 `json:"rent"`
+	Balance    float64 `json:"balance"`
 
-	UnitID      uint      `json:"unit_id"`
-	UnitName    string    `json:"unit_name"`
-	UnitType    string    `json:"unit_type"`
-	UnitPrice   float64   `json:"unit_price"`
+	UnitID    uint    `json:"unit_id"`
+	UnitName  string  `json:"unit_name"`
+	UnitType  string  `json:"unit_type"`
+	UnitPrice float64 `json:"unit_price"`
 
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
-
 
 type Property struct {
 	ID           uint      `json:"id"`
@@ -45,7 +44,7 @@ type Property struct {
 	Location     string    `json:"location"`
 	PropertyType string    `json:"property_type"`
 	Vacancy      bool      `json:"vacancy"`
-	TotalRent    int       `json:"total_rent"`
+	TotalRent    float64   `json:"total_rent"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -62,6 +61,11 @@ type Unit struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type PaybillTransactions struct {
+	ID        uint `json:"id"`
+	ReceiptNo uint `json:"receipt_no"`
+}
+
 // helper struct for creating unit
 type CreateUnitInput struct {
 	PropertyID uint    `json:"-"`
@@ -69,7 +73,6 @@ type CreateUnitInput struct {
 	UnitType   string  `json:"unit_type"`
 	UnitPrice  float64 `json:"unit_price" binding:"required"`
 }
-
 
 type Notification struct {
 	ID       uint   `json:"id"`
