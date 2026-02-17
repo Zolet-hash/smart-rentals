@@ -14,7 +14,7 @@ func SetupRoutes(
 	cfg *config.Config,
 ) {
 	// Global middleware
-	r.Use(middleware.CORS())
+	//r.Use(middleware.CORS())
 
 	authHandler := handlers.NewAuthHandler(db, []byte(cfg.JWT.Secret))
 
@@ -34,7 +34,7 @@ func SetupRoutes(
 	admin := r.Group("/sudo")
 	admin.Use(
 		middleware.AuthMiddleware([]byte(cfg.JWT.Secret)), // secret from env
-		
+
 	)
 	{
 		admin.POST("/register", authHandler.Register)
@@ -68,6 +68,8 @@ func SetupRoutes(
 		// Payments
 		landlord.GET("/properties/:propertyId/payments")
 		landlord.POST("/confirmation-message", handlers.RecordSendMoney(db))
+
+		landlord.GET("/billing", handlers.GetLandlordBilling(db))
 	}
 }
 
