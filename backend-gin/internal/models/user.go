@@ -8,14 +8,16 @@ import (
 
 // User represents our database user
 type User struct {
-	ID           int       `json:"id"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"` //"-" means this wont be included in JSON
-	FullName     string    `json:"full_name"`
-	Phone        string    `json:"phone"`
-	Role         string    `json:"role"`
-	CreatedAT    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID                 int    `json:"id"`
+	Email              string `json:"email"`
+	PasswordHash       string `json:"-"` //"-" means this wont be included in JSON
+	FullName           string `json:"full_name"`
+	Phone              string `json:"phone"`
+	Role               string `json:"role"`
+	SubscriptionStatus string
+	TrialEndsAt        time.Time
+	CreatedAT          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // UserLogin represents new login request
