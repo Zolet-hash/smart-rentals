@@ -40,6 +40,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		})
 		return
 	}
+	now := time.Now().UTC()                  //start time
+	trialEnds := now.Add(7 * 24 * time.Hour) //trial period(7 days)
 
 	// Additional validations
 	if err := user.Validate(); err != nil {
@@ -79,15 +81,15 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	var id int
 	err = tx.QueryRow(`
-        INSERT INTO users (email, password_hash, full_name, phone, role) 
-        VALUES ($1, $2, $3, $4, $5) 
+        INSERT INTO users (email, password_hash, full_name, phone, role, trial_starts_at, trial_ends_at) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7) 
         RETURNING id`,
-		user.Email, hashedPassword, user.FullName, user.Phone, user.Role,
+		user.Email, hashedPassword, user.FullName, user.Phone, user.Role, now, trialEnds,
 	).Scan(&id)
 
 	if err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "User creation failed"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Phone number already registered"})
 		return
 	}
 
@@ -97,9 +99,23 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "User registered successfully",
-		"user_id": id,
+		"message":          "User registered successfully",
+		"user_id":          id,
+		"trial_expires_at": trialEnds,
 	})
+}
+
+func HasActiveAccess(u *models.User) bool {
+	now := time.Now().UTC()
+	if u.SubscriptionStatus == "active" {
+		return true
+	}
+
+	if u.SubscriptionStatus == "trial" && now.Before(u.TrialEndsAt) {
+		return true
+	}
+	return false
+
 }
 
 // Login handles user authentication and JWT generation
@@ -113,11 +129,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Get user from database
 	var user models.User
 	err := h.db.DB.QueryRow(`
-        SELECT id, email, password_hash 
+        SELECT id, email, password_hash, subscription_status, trial_ends_at 
         FROM users 
         WHERE email = $1`,
 		login.Email,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash)
+	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.SubscriptionStatus, &user.TrialEndsAt)
 
 	if err == sql.ErrNoRows {
 		// Don't specify whether email or password was wrong
@@ -125,7 +141,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "subscription expired"})
 		return
 	}
 
@@ -133,6 +149,25 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if !utils.CheckPasswordHash(login.Password, user.PasswordHash) {
 		// Use same message as above for security
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	if user.SubscriptionStatus == "trial" &&
+		time.Now().UTC().After(user.TrialEndsAt) {
+
+		h.db.DB.Exec(`
+        UPDATE users
+        SET subscription_status = 'expired'
+        WHERE id = $1
+    `, user.ID)
+	}
+
+	if !HasActiveAccess(&user) {
+		c.JSON(402, gin.H{
+			"error":           "Trial expired",
+			"trial_ended_at":  user.TrialEndsAt,
+			"action_required": "upgrade",
+		})
 		return
 	}
 
@@ -166,9 +201,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		tokenString,
 		int(h.tokenExpiration.Seconds()),
 		"/",
-		"", // current host
-		false,       // secure (true in HTTPS)
-		true,        // httpOnly (IMPORTANT)
+		"",   // current host
+		true, // secure (true in HTTPS)
+		true, // httpOnly (IMPORTANT)
 	)
 
 	c.JSON(http.StatusOK, gin.H{
