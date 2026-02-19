@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/Zolet-hash/smart-rentals/internal/api/handlers"
 	"github.com/Zolet-hash/smart-rentals/internal/api/middleware"
+	"github.com/Zolet-hash/smart-rentals/internal/api/services"
 	"github.com/Zolet-hash/smart-rentals/internal/database"
 	"github.com/Zolet-hash/smart-rentals/internal/pkg/config"
 	"github.com/gin-gonic/gin"
@@ -14,7 +15,7 @@ func SetupRoutes(
 	cfg *config.Config,
 ) {
 	// Global middleware
-	r.Use(middleware.CORS())
+	//r.Use(middleware.CORS())
 
 	authHandler := handlers.NewAuthHandler(db, []byte(cfg.JWT.Secret))
 
@@ -26,8 +27,8 @@ func SetupRoutes(
 		middleware.RateLimiter(), // <- limit requests
 		authHandler.Login,
 	)
-	api.POST("/validation", handlers.MpesaValidation)
-	api.POST("/confirmation", handlers.MpesaPaymentConfirmation(db))
+	api.POST("/validation", services.MpesaValidation)
+	api.POST("/confirmation", services.MpesaPaymentConfirmation(db))
 	api.POST("/register", authHandler.Register)
 
 	// Admin routes
@@ -48,8 +49,8 @@ func SetupRoutes(
 	{
 		// Properties
 		landlord.POST("/properties", handlers.CreateProperty(db))
-		landlord.POST("/paybill", handlers.AttachPaybill(db))
-		landlord.POST("/till", handlers.AttachTill(db))
+		landlord.POST("/paybill", services.AttachPaybill(db))
+		landlord.POST("/till", services.AttachTill(db))
 		landlord.GET("/properties", handlers.ListProperties(db))
 		landlord.GET("/properties/:propertyId", handlers.GetProperty(db))
 		landlord.PATCH("/properties/:propertyId", handlers.UpdateProperty(db))
@@ -67,7 +68,7 @@ func SetupRoutes(
 
 		// Payments
 		landlord.GET("/properties/:propertyId/payments")
-		landlord.POST("/confirmation-message", handlers.RecordSendMoney(db))
+		landlord.POST("/confirmation-message", services.RecordSendMoney(db))
 
 		landlord.GET("/billing", handlers.GetLandlordBilling(db))
 	}
