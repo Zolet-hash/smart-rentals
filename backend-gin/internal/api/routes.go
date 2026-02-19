@@ -15,7 +15,7 @@ func SetupRoutes(
 	cfg *config.Config,
 ) {
 	// Global middleware
-	//r.Use(middleware.CORS())
+	r.Use(middleware.CORS())
 
 	authHandler := handlers.NewAuthHandler(db, []byte(cfg.JWT.Secret))
 
