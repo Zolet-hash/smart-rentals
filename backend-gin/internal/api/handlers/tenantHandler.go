@@ -5,12 +5,13 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Zolet-hash/smart-rentals/internal/api/services"
 	"github.com/Zolet-hash/smart-rentals/internal/database"
 	"github.com/Zolet-hash/smart-rentals/internal/models"
 	"github.com/gin-gonic/gin"
 )
 
-//CreateTenant creates a new tenant in a property
+// CreateTenant creates a new tenant in a property
 func CreateTenant(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var tenant models.Tenant
@@ -21,8 +22,8 @@ func CreateTenant(db *database.Database) gin.HandlerFunc {
 			return
 		}
 
-		tenant.PaymentNo1 = normalizePhone(tenant.PaymentNo1)
-		tenant.PaymentNo2 = normalizePhone(tenant.PaymentNo2)
+		tenant.PaymentNo1 = services.NormalizePhone(tenant.PaymentNo1)
+		tenant.PaymentNo2 = services.NormalizePhone(tenant.PaymentNo2)
 
 		if tenant.Rent <= 0 {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "rent must be greater than zero"})
@@ -147,7 +148,7 @@ func CreateTenant(db *database.Database) gin.HandlerFunc {
 	}
 }
 
-//ListPropertyTenants lists all tenants in a specific property
+// ListPropertyTenants lists all tenants in a specific property
 func ListPropertyTenants(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Get landlord ID from JWT (HttpOnly cookie)
@@ -250,7 +251,7 @@ func ListPropertyTenants(db *database.Database) gin.HandlerFunc {
 	}
 }
 
-//GetPropertyTenant gets a specific tenant on a property
+// GetPropertyTenant gets a specific tenant on a property
 func GetPropertyTenant(db *database.Database) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Parse property ID from URL
