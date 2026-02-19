@@ -14,7 +14,7 @@ func SetupRoutes(
 	cfg *config.Config,
 ) {
 	// Global middleware
-	//r.Use(middleware.CORS())
+	r.Use(middleware.CORS())
 
 	authHandler := handlers.NewAuthHandler(db, []byte(cfg.JWT.Secret))
 
@@ -28,7 +28,7 @@ func SetupRoutes(
 	)
 	api.POST("/validation", handlers.MpesaValidation)
 	api.POST("/confirmation", handlers.MpesaPaymentConfirmation(db))
-	api.POST("/go", authHandler.Register)
+	api.POST("/register", authHandler.Register)
 
 	// Admin routes
 	admin := r.Group("/sudo")
@@ -37,7 +37,7 @@ func SetupRoutes(
 
 	)
 	{
-		admin.POST("/register", authHandler.Register)
+		//admin.POST("/register", authHandler.Register)
 	}
 
 	// Landlord routes
