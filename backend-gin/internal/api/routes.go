@@ -70,7 +70,7 @@ func SetupRoutes(
 		landlord.GET("/properties/:propertyId/payments")
 		landlord.POST("/confirmation-message", services.RecordSendMoney(db))
 
-		landlord.GET("/billing", handlers.GetLandlordBilling(db))
+		landlord.GET("/billing", services.GetLandlordBilling(db))
 	}
 }
 
